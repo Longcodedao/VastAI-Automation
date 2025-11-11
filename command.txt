@@ -1,0 +1,10 @@
+python3 launch_gpu.py \
+    --gpu-name RTX_3090 \
+    --num-gpus 1 \
+    --min-cpu-ram 64 \
+    --disk-storage 64 \
+    --max-dph 0.6 \
+    --min-cuda-version 12.8 \
+    --template vastai/pytorch:cuda-12.8.1-auto \
+    --ssh-key-path ~/.ssh/id_ed25519.pub \
+    --tag My_RTX3090_ForUsage
