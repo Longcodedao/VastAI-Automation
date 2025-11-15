@@ -1,4 +1,5 @@
 import subprocess
+import sys
 
 
 def run_vast_command(
@@ -92,3 +93,44 @@ def cleanup_instance(instance_id: str):
                 print(f"   Error: {result.stderr.strip()}")
     else:
         print("Script failed before instance creation. No cleanup needed.")
+
+
+def display_instance(offer_instance, target_gpu: str = None):
+    #    print(offer_instance)
+    offer_id = offer_instance.get("id")
+
+    if not offer_id:
+        print(f"\nNo suitable offer found matching all criteria for {target_gpu}")
+        sys.exit(1)
+
+    # Extract and calculate details (API returns MB, convert to GB)
+    cpu_name = offer_instance.get("cpu_name", "N/A")
+    gpu_name = offer_instance.get("gpu_name", "N/A")
+    dph_total = float(offer_instance.get("dph_total", 0.0))
+    cpu_ram_mb = offer_instance.get("cpu_ram", 0)
+    gpu_ram_mb = offer_instance.get("gpu_ram", 0)
+    disk_storage = offer_instance.get("disk_space", 0)
+    rel_score = float(offer_instance.get("reliability", 0.0))
+    dlperf_score = float(offer_instance.get("dlperf", 0.0))
+    inet_down = float(offer_instance.get("inet_down", 0.0))
+    inet_up = float(offer_instance.get("inet_up", 0.0))
+    geolocation = offer_instance.get("geolocation", "N/A")
+
+    cpu_ram_gb = cpu_ram_mb / 1024
+    gpu_ram_gb = gpu_ram_mb / 1024
+    inet_down_mbs = inet_down * 0.125
+    inet_up_mbs = inet_up * 0.125
+
+    print(f"✅ Found cheapest offer: ID {offer_id}")
+    print("💡 Offer details:")
+    print(f"   Geolocation: {geolocation}")
+    print(f"   CPU Name: {cpu_name}")
+    print(f"   CPU RAM (GB): {cpu_ram_gb:.2f}")
+    print(f"   GPU Name: {gpu_name}")
+    print(f"   VRAM (GB): {gpu_ram_gb:.2f}")
+    print(f"   DPH Total: {dph_total:.4f} USD")
+    print(f"   Disk Storage (GB): {disk_storage:.2f}")
+    print(f"   Reliability: {rel_score:.4f}")
+    print(f"   DLPerf: {dlperf_score:.2f}")
+    print(f"   Inet Down (MB/s): {inet_down_mbs}")
+    print(f"   Inet Up   (MB/s): {inet_up_mbs}")

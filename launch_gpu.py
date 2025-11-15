@@ -6,7 +6,7 @@ import time
 import os
 import re  # Added import for SSH URI parsing
 import asyncio
-from utils import run_vast_command, cleanup_instance
+from utils import run_vast_command, cleanup_instance, display_instance
 
 # --- Configuration Constants ---
 MAX_ATTEMPTS = 6
@@ -155,6 +155,9 @@ def parse_args():
     return parser.parse_args()
 
 
+offer_details = None
+
+
 async def main_async():
     args = parse_args()
     target_gpu = args.gpu_name
@@ -188,55 +191,48 @@ async def main_async():
         if not offer_details:
             print(f"\nNo suitable offer found matching all criteria for {target_gpu}")
             sys.exit(1)
+        index_chosen = 0
 
-        offer = offer_details[0]
-        offer_id = offer.get("id")
+        # --- 4. Interactive Confirmation ---
+        # Press y to confirm
+        # Press n to move on
+        # Press c to cancel
 
-        if not offer_id:
-            print(f"\nNo suitable offer found matching all criteria for {target_gpu}")
-            sys.exit(1)
+        while True:
+            offer = offer_details[index_chosen]
+            display_instance(offer, target_gpu)
 
-        # Extract and calculate details (API returns MB, convert to GB)
-        gpu_name = offer.get("gpu_name", "N/A")
-        dph_total = float(offer.get("dph_total", 0.0))
-        cpu_ram_mb = offer.get("cpu_ram", 0)
-        gpu_ram_mb = offer.get("gpu_ram", 0)
-        disk_storage = offer.get("disk_space", 0)
-        rel_score = float(offer.get("reliability", 0.0))
-        dlperf_score = float(offer.get("dlperf", 0.0))
+            user_choice = input(
+                "Do you want to launch this instance? (y/n/c): "
+            ).lower()
 
-        cpu_ram_gb = cpu_ram_mb / 1024
-        gpu_ram_gb = gpu_ram_mb / 1024
+            if user_choice == "y":
+                break
 
-        print(f"✅ Found cheapest offer: ID {offer_id}")
-        print("💡 Offer details:")
-        print(f"   GPU Name: {gpu_name}")
-        print(f"   VRAM (GB): {gpu_ram_gb:.2f}")
-        print(f"   DPH Total: {dph_total:.4f} USD")
-        print(f"   CPU RAM (GB): {cpu_ram_gb:.2f}")
-        print(f"   Disk Storage (GB): {disk_storage:.2f}")
-        print(f"   Reliability: {rel_score:.4f}")
-        print(f"   DLPerf: {dlperf_score:.2f}")
+            elif user_choice == "c":
+                print("Operation cancelled by user.")
+                sys.exit(0)
+
+            elif user_choice == "n":
+                index_chosen = (
+                    index_chosen + 1 if index_chosen < len(offer_details) - 1 else 0
+                )
+
+            else:
+                print(
+                    "Invalid input. Please enter 'y' for yes; 'n' for no; 'c' for cancel: "
+                )
 
     except Exception as e:
-        print(f"\n❌ Error during offer search or parsing.")
+        print("\n❌ Error during offer search or parsing.")
         print(e)
         # Print details only if not a subprocess error (which is handled in run_vast_command)
         if not isinstance(e, subprocess.CalledProcessError):
             print(f"   Detail: {e}")
         sys.exit(1)
 
-    # --- 4. Interactive Confirmation ---
-    user_choice = input("Do you want to launch this instance? (y/n): ").lower()
-    while user_choice not in ["y", "n"]:
-        user_choice = input(
-            "Invalid input. Please enter 'y' for yes or 'n' for no: "
-        ).lower()
-
-    if user_choice == "n":
-        print("Operation cancelled by user.")
-        sys.exit(0)
-
+    display_instance(offer)
+    offer_id = offer.get("id")
     # --- 5. Create Instance (Wrapped in try/finally for cleanup) ---
     try:
         print("🚀 Creating instance...")

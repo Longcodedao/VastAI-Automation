@@ -30,6 +30,7 @@ def main():
     # Parse the argument to get the instance
     args = parse_args()
     instance_id = args.instance_id
+    ssh_ext_port = None
 
     try:
         # Create a command to collect the instance information
@@ -46,7 +47,11 @@ def main():
         public_ip = out_json.get("public_ipaddr", None)
         ports = out_json.get("ports")
 
-        mosh_ext_port = ports.get(f"{args.port_udp}/udp")[0].get("HostPort")
+        mosh_ext_port = ports.get(f"{args.port_udp}/udp")
+        if mosh_ext_port is None:
+            raise RuntimeError("Cannot find the UDP Port. Please check Again")
+
+        mosh_ext_port = mosh_ext_port[0].get("HostPort")
         ssh_ext_port = ports.get("22/tcp")[0].get("HostPort")
 
         if not public_ip or not ports or not ssh_ext_port:
@@ -55,6 +60,7 @@ def main():
 
     except Exception as e:
         print(f"Unexpected Error has occured: {e}")
+        sys.exit(0)
 
     mosh_cmd = f"mosh-server new -p {args.port_udp}"
     ssh_cmd = [
