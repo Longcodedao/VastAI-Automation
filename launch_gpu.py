@@ -242,7 +242,36 @@ async def main_async():
         )
         ports = "-p 1111:1111 -p 6006:6006 -p 8080:8080 -p 8384:8384 -p 72299:72299 -p 60001:60001/udp"
 
-        on_start_cmd_script = "echo 'Updating apt...'; apt-get update; echo 'Installing mosh and locales...'; apt-get install -y mosh; echo 'Generating en_US.UTF-8 locale...'; locale-gen en_US.UTF-8; update-locale LANG=en_US.UTF-8; export LANG=en_US.UTF-8; export LC_ALL=en_US.UTF-8; echo 'Setup complete. Starting original entrypoint...'; exec entrypoint.sh"
+        on_start_cmd_script = """
+        echo 'Updating apt...'; 
+        apt-get update; 
+        echo 'Installing mosh, locales, and tmux...'; 
+        apt-get install -y mosh tmux;
+        apt-get install -y neofetch;
+        apt-get install -y btop;
+        apt-get install -y nvtop;
+        echo 'Generating en_US.UTF-8 locale...'; 
+        locale-gen en_US.UTF-8; 
+        update-locale LANG=en_US.UTF-8; 
+        export LANG=en_US.UTF-8; 
+        export LC_ALL=en_US.UTF-8; 
+
+        # Create .tmux.conf and configure Ctrl+a as prefix
+        echo "
+            # Unbind default Ctrl+b prefix
+            unbind C-b
+            # Set new prefix to Ctrl+a
+            set -g prefix C-a
+            # Bind the prefix key to itself so you can type Ctrl+a twice to get a literal Ctrl+a
+            bind C-a send-prefix
+
+            # Optional: Add a binding to quickly reload this config file
+            bind r source-file ~/.tmux.conf
+            " > ~/.tmux.conf
+
+        echo 'Setup complete. Starting original entrypoint...'; 
+        exec entrypoint.sh
+        """
         environment_setup = env_vars + " " + ports
 
         create_output = run_vast_command(
